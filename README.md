@@ -53,7 +53,7 @@ IDLE → PRESENTING → WAITING_FOR_ANSWER → PROCESSING → CORRECT / WRONG �
 - Each round shows a scene (image + character) illustrating an emotion
 - Child responds with the cube (or touch fallback)
 - CORRECT: character celebrates, enters the Emotion Book
-- WRONG: gentle confused animation, subtle hint, same scene repeats — no punishment
+- WRONG: gentle confused animation, subtle hint, same scene repeats — no punishment (search theorical reference about this!)
 - After 2 wrong attempts: answer is revealed softly, game moves on
 
 ## Progression (3 acts)
@@ -78,3 +78,12 @@ Gallery of cured characters. Revisitable at any time. Therapeutic review tool.
 - Game: Defold
 - Backend: Java Spring Boot + MQTT
 - IoT: C + Arduino/ESP
+
+
+## Add to the final report
+
+- Include our concern with connectiviy problems and/or problems with the cube.
+
+## Notes
+
+- Include more situations for the child to identify. We only have 18 for now.
