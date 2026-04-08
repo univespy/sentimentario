@@ -1,0 +1,206 @@
+local emotions = require("data.emotions")
+
+local W  = 640
+local H  = 1136
+local CX = W * 0.5
+
+-- colours
+local WHITE  = vmath.vector4(1,    1,    1,    1)
+local GRAY   = vmath.vector4(0.55, 0.55, 0.55, 1)
+local YELLOW = vmath.vector4(1,    0.85, 0.3,  1)
+local GREEN  = vmath.vector4(0.2,  0.9,  0.3,  1)
+local RED    = vmath.vector4(1,    0.25, 0.2,  1)
+local ORANGE = vmath.vector4(1,    0.7,  0.1,  1)
+local DARK   = vmath.vector4(0.08, 0.08, 0.12, 1)
+
+local BTN_W = 260
+local BTN_H = 70
+
+-- 2-column grid, rows from top to bottom
+local BTN_POS = {
+    joy       = vmath.vector3(160, 490, 0.2),
+    sadness   = vmath.vector3(480, 490, 0.2),
+    anger     = vmath.vector3(160, 390, 0.2),
+    fear      = vmath.vector3(480, 390, 0.2),
+    surprise  = vmath.vector3(160, 290, 0.2),
+    affection = vmath.vector3(480, 290, 0.2),
+}
+
+-- ── node factories ────────────────────────────────────────────────────────────
+
+local function make_box(pos, w, h, color)
+    local n = gui.new_box_node(pos, vmath.vector3(w, h, 0))
+    gui.set_color(n, color)
+    gui.set_pivot(n, gui.PIVOT_CENTER)
+    return n
+end
+
+local function make_text(pos, str, color, parent)
+    local n = gui.new_text_node(pos, str)
+    gui.set_color(n, color)
+    gui.set_pivot(n, gui.PIVOT_CENTER)
+    if parent then gui.set_parent(n, parent, false) end
+    return n
+end
+
+-- ── ui builder ────────────────────────────────────────────────────────────────
+
+local function build(self)
+    -- full-screen dark background
+    self.bg = make_box(vmath.vector3(CX, H * 0.5, 0), W, H, DARK)
+
+    -- current state name (top strip)
+    self.state_lbl = make_text(vmath.vector3(CX, 1085, 0.1), "IDLE", GRAY)
+
+    -- act · scene counter
+    self.act_lbl = make_text(vmath.vector3(CX, 1040, 0.1), "", WHITE)
+
+    -- coloured card that shows the scene description
+    self.card = make_box(vmath.vector3(CX, 865, 0.1), 580, 170,
+                         vmath.vector4(0.18, 0.18, 0.28, 1))
+    self.desc_lbl = make_text(vmath.vector3(CX, 865, 0.2), "", WHITE)
+    gui.set_size(self.desc_lbl, vmath.vector3(540, 160, 0))
+    gui.set_line_break(self.desc_lbl, true)
+
+    -- hint (Act 1 only)
+    self.hint_lbl = make_text(vmath.vector3(CX, 745, 0.1), "", YELLOW)
+
+    -- feedback line (correct / wrong / reveal)
+    self.feedback_lbl = make_text(vmath.vector3(CX, 670, 0.1), "", WHITE)
+
+    -- idle / book prompt (centre of screen)
+    self.idle_lbl = make_text(vmath.vector3(CX, 568, 0.1), "Tap anywhere to start", WHITE)
+
+    -- label above buttons
+    self.choose_lbl = make_text(vmath.vector3(CX, 570, 0.1), "Qual e o sentimento?", GRAY)
+
+    -- emotion buttons
+    self.btns = {}
+    for _, e in ipairs(emotions.list) do
+        local c   = e.color
+        local col = vmath.vector4(c.r, c.g, c.b, 1)
+        local btn = make_box(BTN_POS[e.id], BTN_W, BTN_H, col)
+        -- dark label on coloured button
+        make_text(vmath.vector3(0, 0, 0.1), e.label, vmath.vector4(0, 0, 0, 1), btn)
+        self.btns[e.id] = btn
+    end
+end
+
+-- ── visibility helpers ────────────────────────────────────────────────────────
+
+local function show(node, on)
+    gui.set_enabled(node, on)
+end
+
+local function show_buttons(self, on)
+    show(self.choose_lbl, on)
+    for _, e in ipairs(emotions.list) do
+        show(self.btns[e.id], on)
+    end
+    self.btns_active = on
+end
+
+local function show_game_ui(self, on)
+    show(self.act_lbl,  on)
+    show(self.card,     on)
+    show(self.desc_lbl, on)
+end
+
+local function enter_idle(self, prompt)
+    gui.set_text(self.idle_lbl, prompt)
+    show(self.idle_lbl,    true)
+    show(self.hint_lbl,    false)
+    show(self.feedback_lbl, false)
+    show_game_ui(self,  false)
+    show_buttons(self,  false)
+end
+
+-- ── lifecycle ─────────────────────────────────────────────────────────────────
+
+function init(self)
+    msg.post(".", "acquire_input_focus")
+    self.btns_active = false
+    build(self)
+    enter_idle(self, "Toque na tela para comecar")
+end
+
+-- ── message handler ───────────────────────────────────────────────────────────
+
+function on_message(self, message_id, message, sender)
+
+    -- ── state machine mirror ──
+    if message_id == hash("state_changed") then
+        gui.set_text(self.state_lbl, message.state)
+
+        if message.state == "IDLE" then
+            enter_idle(self, "Toque na tela para comecar")
+
+        elseif message.state == "PRESENTING" then
+            show(self.idle_lbl,     false)
+            show(self.feedback_lbl, false)
+            show_game_ui(self,  true)
+            show_buttons(self,  false)
+
+        elseif message.state == "WAITING_FOR_ANSWER" then
+            show_buttons(self, true)
+
+        elseif message.state == "CORRECT" then
+            self.btns_active = false   -- keep visible but freeze clicks
+
+        elseif message.state == "WRONG" then
+            self.btns_active = true    -- player may still try again
+
+        elseif message.state == "BOOK" then
+            enter_idle(self, "Livro de Sentimentos\n(Toque para voltar)")
+        end
+
+    -- ── scene content ──
+    elseif message_id == hash("present_scene") then
+        gui.set_text(self.act_lbl,
+            "Ato " .. message.act .. "  ·  Cena " .. message.scene_index)
+        gui.set_text(self.desc_lbl, message.description)
+        -- tint card with a dim version of the emotion colour
+        local c = message.color
+        gui.set_color(self.card, vmath.vector4(c.r * 0.22, c.g * 0.22, c.b * 0.22, 1))
+
+        if message.hint ~= "" then
+            gui.set_text(self.hint_lbl, "Dica: " .. message.hint)
+            show(self.hint_lbl, true)
+        else
+            show(self.hint_lbl, false)
+        end
+
+    -- ── answer feedback ──
+    elseif message_id == hash("answer_correct") then
+        local e = emotions.by_id[message.emotion_id]
+        gui.set_text(self.feedback_lbl, "Correto!  " .. e.label .. " ✓")
+        gui.set_color(self.feedback_lbl, GREEN)
+        show(self.feedback_lbl, true)
+
+    elseif message_id == hash("answer_wrong") then
+        gui.set_text(self.feedback_lbl,
+            "Quase! Tente de novo (" .. message.attempt .. " / " .. message.max .. ")")
+        gui.set_color(self.feedback_lbl, RED)
+        show(self.feedback_lbl, true)
+
+    elseif message_id == hash("reveal_answer") then
+        local e = emotions.by_id[message.emotion_id]
+        gui.set_text(self.feedback_lbl, "Era:  " .. e.label)
+        gui.set_color(self.feedback_lbl, ORANGE)
+        show(self.feedback_lbl, true)
+    end
+end
+
+-- ── input handler ─────────────────────────────────────────────────────────────
+
+function on_input(self, action_id, action)
+    if not (action_id == hash("touch") and action.pressed) then return end
+    if not self.btns_active then return end
+
+    for _, e in ipairs(emotions.list) do
+        if gui.pick_node(self.btns[e.id], action.x, action.y) then
+            msg.post("game_manager#game_manager", "answer", { emotion_id = e.id })
+            return true  -- consume event so game_manager doesn't also handle it
+        end
+    end
+end

@@ -1,0 +1,151 @@
+local emotions = require("data.emotions")
+local scenes   = require("data.scenes")
+
+local STATES = {
+    IDLE               = "IDLE",
+    PRESENTING         = "PRESENTING",
+    WAITING_FOR_ANSWER = "WAITING_FOR_ANSWER",
+    PROCESSING         = "PROCESSING",
+    CORRECT            = "CORRECT",
+    WRONG              = "WRONG",
+    BOOK               = "BOOK",
+}
+
+local MAX_WRONG = 2
+
+-- ── helpers ───────────────────────────────────────────────────────────────────
+
+local function log(msg)
+    print("[GameManager] " .. tostring(msg))
+end
+
+local function transition(self, new_state)
+    log(self.state .. " → " .. new_state)
+    self.state = new_state
+    msg.post("#hud", "state_changed", { state = new_state })
+end
+
+local function current_scene(self)
+    return scenes.acts[self.act][self.scene_index]
+end
+
+local function unlocked_count(self)
+    local n = 0
+    for _ in pairs(self.unlocked) do n = n + 1 end
+    return n
+end
+
+-- ── scene flow ────────────────────────────────────────────────────────────────
+
+local function present_scene(self)
+    transition(self, STATES.PRESENTING)
+    local scene   = current_scene(self)
+    local emotion = emotions.by_id[scene.emotion]
+
+    log(string.format('Scene: "%s"', scene.description))
+
+    msg.post("#hud", "present_scene", {
+        act         = self.act,
+        scene_index = self.scene_index,
+        description = scene.description,
+        hint        = (self.act == 1) and scene.hint or "",
+        emotion_id  = scene.emotion,
+        color       = emotion.color,
+    })
+
+    timer.delay(0.5, false, function(self, _, _)
+        transition(self, STATES.WAITING_FOR_ANSWER)
+    end)
+end
+
+local function advance(self)
+    self.wrong_attempts = 0
+    self.scene_index    = self.scene_index + 1
+
+    if self.scene_index > #scenes.acts[self.act] then
+        self.scene_index = 1
+        self.act         = self.act + 1
+        if self.act > 3 then
+            log("All acts complete!")
+            transition(self, STATES.BOOK)
+            return
+        end
+        log("━━━ Starting Act " .. self.act .. " ━━━")
+    end
+
+    present_scene(self)
+end
+
+local function process_answer(self, emotion_id)
+    if self.state ~= STATES.WAITING_FOR_ANSWER then return end
+    transition(self, STATES.PROCESSING)
+
+    local scene   = current_scene(self)
+    local correct = (emotion_id == scene.emotion)
+    log(string.format("Answer: %-10s | %s", emotion_id, correct and "CORRECT ✓" or "WRONG ✗"))
+
+    if correct then
+        transition(self, STATES.CORRECT)
+        self.unlocked[emotion_id] = true
+        log(string.format('"%s" added to Emotion Book. (%d unlocked)',
+            emotions.by_id[emotion_id].label, unlocked_count(self)))
+        msg.post("#hud", "answer_correct", { emotion_id = emotion_id })
+        timer.delay(1.5, false, function(self, _, _)
+            advance(self)
+        end)
+    else
+        self.wrong_attempts = self.wrong_attempts + 1
+        transition(self, STATES.WRONG)
+        log(string.format("Wrong attempt %d / %d", self.wrong_attempts, MAX_WRONG))
+        msg.post("#hud", "answer_wrong", { attempt = self.wrong_attempts, max = MAX_WRONG })
+
+        if self.wrong_attempts >= MAX_WRONG then
+            local correct_emotion = emotions.by_id[scene.emotion]
+            log(string.format('Revealing: it was "%s"', correct_emotion.label))
+            msg.post("#hud", "reveal_answer", { emotion_id = scene.emotion })
+            timer.delay(2.0, false, function(self, _, _)
+                advance(self)
+            end)
+        else
+            log("Same scene repeats.")
+            timer.delay(1.5, false, function(self, _, _)
+                present_scene(self)
+            end)
+        end
+    end
+end
+
+-- ── lifecycle ─────────────────────────────────────────────────────────────────
+
+function init(self)
+    self.state          = STATES.IDLE
+    self.act            = 1
+    self.scene_index    = 1
+    self.wrong_attempts = 0
+    self.unlocked       = {}
+
+    msg.post(".", "acquire_input_focus")
+    log("Ready. Tap the screen to start.")
+end
+
+function on_message(self, message_id, message, sender)
+    if message_id == hash("answer") then
+        process_answer(self, message.emotion_id)
+    elseif message_id == hash("open_book") then
+        transition(self, STATES.BOOK)
+    elseif message_id == hash("close_book") then
+        transition(self, STATES.IDLE)
+    end
+end
+
+function on_input(self, action_id, action)
+    if not (action_id == hash("touch") and action.pressed) then return end
+
+    if self.state == STATES.IDLE then
+        log("━━━ Starting Act " .. self.act .. " ━━━")
+        present_scene(self)
+    elseif self.state == STATES.BOOK then
+        transition(self, STATES.IDLE)
+        log("Returned from Emotion Book.")
+    end
+end

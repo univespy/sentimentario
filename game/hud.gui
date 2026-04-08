@@ -1,0 +1,6 @@
+script: "/game/hud.gui_script"
+fonts {
+  name: "system_font"
+  font: "/builtins/fonts/default.font"
+}
+material: "/builtins/materials/gui.material"
