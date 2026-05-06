@@ -1,0 +1,25 @@
+-- Audio manager — receives play_sound { id = "correct" } messages and plays
+-- the corresponding sound component on this game object.
+--
+-- To activate sound:
+--   1. Place .ogg files in /audio/ (correct, wrong, reveal, transition, book_open)
+--   2. Create /audio/<name>.sound files referencing each .ogg
+--   3. Add sound components to game/audio.go referencing those .sound files
+--   4. Add an instance of game/audio.go to main/main.collection
+
+local SOUNDS = {
+    correct    = "#correct",
+    wrong      = "#wrong",
+    reveal     = "#reveal",
+    transition = "#transition",
+    book_open  = "#book_open",
+}
+
+function on_message(self, message_id, message, sender)
+    if message_id == hash("play_sound") then
+        local url = SOUNDS[message.id]
+        if url then
+            sound.play(url)
+        end
+    end
+end

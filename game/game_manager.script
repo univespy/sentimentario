@@ -37,12 +37,17 @@ end
 
 -- ── scene flow ────────────────────────────────────────────────────────────────
 
+local function play_sound(id)
+    msg.post("game_manager#audio", "play_sound", { id = id })
+end
+
 local function present_scene(self)
     transition(self, STATES.PRESENTING)
     local scene   = current_scene(self)
     local emotion = emotions.by_id[scene.emotion]
 
     log(string.format('Scene: "%s"', scene.description))
+    play_sound("transition")
 
     msg.post("#hud", "present_scene", {
         act         = self.act,
@@ -90,6 +95,7 @@ local function process_answer(self, emotion_id)
         log(string.format('"%s" added to Emotion Book. (%d unlocked)',
             emotions.by_id[emotion_id].label, unlocked_count(self)))
         msg.post("#hud", "answer_correct", { emotion_id = emotion_id })
+        play_sound("correct")
         timer.delay(1.5, false, function(self, _, _)
             advance(self)
         end)
@@ -103,10 +109,12 @@ local function process_answer(self, emotion_id)
             local correct_emotion = emotions.by_id[scene.emotion]
             log(string.format('Revealing: it was "%s"', correct_emotion.label))
             msg.post("#hud", "reveal_answer", { emotion_id = scene.emotion })
+            play_sound("reveal")
             timer.delay(2.0, false, function(self, _, _)
                 advance(self)
             end)
         else
+            play_sound("wrong")
             log("Same scene repeats.")
             timer.delay(1.5, false, function(self, _, _)
                 present_scene(self)
@@ -132,8 +140,10 @@ function on_message(self, message_id, message, sender)
     if message_id == hash("answer") then
         process_answer(self, message.emotion_id)
     elseif message_id == hash("open_book") then
+        play_sound("book_open")
         transition(self, STATES.BOOK)
     elseif message_id == hash("close_book") then
+        play_sound("book_open")
         transition(self, STATES.IDLE)
     end
 end
@@ -144,8 +154,5 @@ function on_input(self, action_id, action)
     if self.state == STATES.IDLE then
         log("━━━ Starting Act " .. self.act .. " ━━━")
         present_scene(self)
-    elseif self.state == STATES.BOOK then
-        transition(self, STATES.IDLE)
-        log("Returned from Emotion Book.")
     end
 end
