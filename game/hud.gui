@@ -3,4 +3,8 @@ fonts {
   name: "system_font"
   font: "/builtins/fonts/default.font"
 }
+textures {
+  name: "scenes"
+  texture: "/assets/scenes/scenes.atlas"
+}
 material: "/builtins/materials/gui.material"

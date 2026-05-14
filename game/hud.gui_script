@@ -3,7 +3,8 @@ local emotions = require("data.emotions")
 local W    = 640
 local H    = 1136
 local CX   = W * 0.5
-local CARD_Y = 865
+local IMG_Y  = 855   -- scene image centre
+local DESC_Y = 645   -- description text centre
 
 -- colours
 local WHITE  = vmath.vector4(1,    1,    1,    1)
@@ -58,31 +59,29 @@ end
 
 -- ── animations ────────────────────────────────────────────────────────────────
 
-local function anim_card_enter(card, desc_lbl)
-    gui.cancel_animation(card,     gui.PROP_POSITION)
-    gui.cancel_animation(card,     gui.PROP_COLOR)
+local function anim_scene_enter(img, desc_lbl)
+    gui.cancel_animation(img,      gui.PROP_POSITION)
+    gui.cancel_animation(img,      gui.PROP_COLOR)
     gui.cancel_animation(desc_lbl, gui.PROP_COLOR)
     gui.cancel_animation(desc_lbl, gui.PROP_POSITION)
 
-    local card_dest = vmath.vector3(CX, CARD_Y, 0.1)
-    local desc_dest = vmath.vector3(CX, CARD_Y, 0.2)
-    gui.set_position(card,     vmath.vector3(CX, CARD_Y - 30, 0.1))
-    gui.set_position(desc_lbl, vmath.vector3(CX, CARD_Y - 30, 0.2))
+    local img_dest  = vmath.vector3(CX, IMG_Y,  0.1)
+    local desc_dest = vmath.vector3(CX, DESC_Y, 0.2)
+    gui.set_position(img,      vmath.vector3(CX, IMG_Y  - 30, 0.1))
+    gui.set_position(desc_lbl, vmath.vector3(CX, DESC_Y - 30, 0.2))
 
-    local col = gui.get_color(card)
-    gui.set_color(card,     vmath.vector4(col.x, col.y, col.z, 0))
+    gui.set_color(img,      vmath.vector4(1, 1, 1, 0))
     gui.set_color(desc_lbl, vmath.vector4(1, 1, 1, 0))
 
-    gui.animate(card,     gui.PROP_POSITION, card_dest, gui.EASING_OUTQUAD, 0.35)
-    gui.animate(card,     gui.PROP_COLOR, vmath.vector4(col.x, col.y, col.z, 1), gui.EASING_OUTQUAD, 0.35)
+    gui.animate(img,      gui.PROP_POSITION, img_dest,  gui.EASING_OUTQUAD, 0.35)
+    gui.animate(img,      gui.PROP_COLOR,    WHITE,     gui.EASING_OUTQUAD, 0.35)
     gui.animate(desc_lbl, gui.PROP_POSITION, desc_dest, gui.EASING_OUTQUAD, 0.35)
-    gui.animate(desc_lbl, gui.PROP_COLOR, WHITE, gui.EASING_OUTQUAD, 0.35, 0.1)
+    gui.animate(desc_lbl, gui.PROP_COLOR,    WHITE,     gui.EASING_OUTQUAD, 0.35, 0.1)
 end
 
-local function anim_card_correct(card)
-    local base_col = gui.get_color(card)
-    gui.animate(card, gui.PROP_COLOR, GREEN, gui.EASING_OUTQUAD, 0.15, 0, function()
-        gui.animate(card, gui.PROP_COLOR, base_col, gui.EASING_OUTQUAD, 0.5)
+local function anim_scene_correct(img)
+    gui.animate(img, gui.PROP_COLOR, GREEN, gui.EASING_OUTQUAD, 0.15, 0, function()
+        gui.animate(img, gui.PROP_COLOR, WHITE, gui.EASING_OUTQUAD, 0.5)
     end)
 end
 
@@ -93,13 +92,13 @@ local function anim_feedback_pop(lbl)
     end)
 end
 
-local function anim_card_shake(card)
-    local base = gui.get_position(card)
+local function anim_scene_shake(img)
+    local base = gui.get_position(img)
     local offsets = { 12, -12, 10, -10, 7, -7, 0 }
     local function step(i)
         if i > #offsets then return end
         local p = vmath.vector3(base.x + offsets[i], base.y, base.z)
-        gui.animate(card, gui.PROP_POSITION, p, gui.EASING_LINEAR, 0.06, 0, function()
+        gui.animate(img, gui.PROP_POSITION, p, gui.EASING_LINEAR, 0.06, 0, function()
             step(i + 1)
         end)
     end
@@ -146,18 +145,21 @@ local function build(self)
     -- act · scene counter
     self.act_lbl = make_text(vmath.vector3(CX, 1040, 0.1), "", WHITE)
 
-    -- coloured card that shows the scene description
-    self.card = make_box(vmath.vector3(CX, CARD_Y, 0.1), 580, 170,
-                         vmath.vector4(0.18, 0.18, 0.28, 1))
-    self.desc_lbl = make_text(vmath.vector3(CX, CARD_Y, 0.2), "", WHITE)
-    gui.set_size(self.desc_lbl, vmath.vector3(540, 160, 0))
+    -- scene image (580×300 placeholder, replaced by real art per-scene)
+    self.scene_img = make_box(vmath.vector3(CX, IMG_Y, 0.1), 580, 300,
+                              vmath.vector4(0.16, 0.16, 0.25, 1))
+    gui.set_texture(self.scene_img, "scenes")
+
+    -- scene description below the image
+    self.desc_lbl = make_text(vmath.vector3(CX, DESC_Y, 0.2), "", WHITE)
+    gui.set_size(self.desc_lbl, vmath.vector3(560, 70, 0))
     gui.set_line_break(self.desc_lbl, true)
 
     -- hint (Ato 1 only)
-    self.hint_lbl = make_text(vmath.vector3(CX, 745, 0.1), "", YELLOW)
+    self.hint_lbl = make_text(vmath.vector3(CX, 597, 0.1), "", YELLOW)
 
     -- feedback line (acerto / erro / revelar)
-    self.feedback_lbl = make_text(vmath.vector3(CX, 670, 0.1), "", WHITE)
+    self.feedback_lbl = make_text(vmath.vector3(CX, 550, 0.1), "", WHITE)
 
     -- idle prompt
     self.idle_lbl = make_text(vmath.vector3(CX, 568, 0.1), "", WHITE)
@@ -216,9 +218,9 @@ local function show_buttons(self, on)
 end
 
 local function show_game_ui(self, on)
-    show(self.act_lbl,  on)
-    show(self.card,     on)
-    show(self.desc_lbl, on)
+    show(self.act_lbl,   on)
+    show(self.scene_img, on)
+    show(self.desc_lbl,  on)
 end
 
 local function show_book_ui(self, on)
@@ -323,10 +325,8 @@ function on_message(self, message_id, message, sender)
         gui.set_text(self.act_lbl,
             "Ato " .. message.act .. "  -  Cena " .. message.scene_index)
         gui.set_text(self.desc_lbl, message.description)
-
-        local c = message.color
-        gui.set_color(self.card, vmath.vector4(c.r * 0.22, c.g * 0.22, c.b * 0.22, 1))
-        anim_card_enter(self.card, self.desc_lbl)
+        gui.play_flipbook(self.scene_img, hash(message.image))
+        anim_scene_enter(self.scene_img, self.desc_lbl)
 
         if message.hint ~= "" then
             gui.set_text(self.hint_lbl, "Dica: " .. message.hint)
@@ -341,7 +341,7 @@ function on_message(self, message_id, message, sender)
         gui.set_text(self.feedback_lbl, "Correto!  " .. e.label .. "!")
         gui.set_color(self.feedback_lbl, GREEN)
         show(self.feedback_lbl, true)
-        anim_card_correct(self.card)
+        anim_scene_correct(self.scene_img)
         anim_feedback_pop(self.feedback_lbl)
 
     elseif message_id == hash("answer_wrong") then
@@ -349,7 +349,7 @@ function on_message(self, message_id, message, sender)
             "Quase! Tente de novo (" .. message.attempt .. " / " .. message.max .. ")")
         gui.set_color(self.feedback_lbl, ORANGE)
         show(self.feedback_lbl, true)
-        anim_card_shake(self.card)
+        anim_scene_shake(self.scene_img)
 
     elseif message_id == hash("reveal_answer") then
         local e = emotions.by_id[message.emotion_id]

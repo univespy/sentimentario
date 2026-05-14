@@ -56,6 +56,7 @@ local function present_scene(self)
         hint        = (self.act == 1) and scene.hint or "",
         emotion_id  = scene.emotion,
         color       = emotion.color,
+        image       = scene.image,
     })
 
     timer.delay(0.5, false, function(self, _, _)
