@@ -3,7 +3,7 @@ extrude_borders: 2
 inner_padding: 0
 animations {
   id: "alegria_presente"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/alegria_presente.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -11,7 +11,7 @@ animations {
 }
 animations {
   id: "tristeza_cachorro_chuva"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/tristeza_cachorro_chuva.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -19,7 +19,7 @@ animations {
 }
 animations {
   id: "raiva_torre_blocos"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/raiva_torre_blocos.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -27,7 +27,7 @@ animations {
 }
 animations {
   id: "medo_trovao"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/medo_trovao.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -35,7 +35,7 @@ animations {
 }
 animations {
   id: "surpresa_porta"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/surpresa_porta.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -43,7 +43,7 @@ animations {
 }
 animations {
   id: "carinho_avo"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/carinho_avo.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -51,7 +51,7 @@ animations {
 }
 animations {
   id: "alegria_gol"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/alegria_gol.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -59,7 +59,7 @@ animations {
 }
 animations {
   id: "tristeza_despedida"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/tristeza_despedida.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -67,7 +67,7 @@ animations {
 }
 animations {
   id: "medo_quarto_escuro"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/medo_quarto_escuro.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -75,7 +75,7 @@ animations {
 }
 animations {
   id: "surpresa_turma_decora"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/surpresa_turma_decora.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
