@@ -83,7 +83,7 @@ animations {
 }
 animations {
   id: "alegria_reencontro"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/alegria_reencontro.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -91,7 +91,7 @@ animations {
 }
 animations {
   id: "tristeza_brinquedo_perdido"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/tristeza_brinquedo_perdido.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -99,7 +99,7 @@ animations {
 }
 animations {
   id: "raiva_biscoito"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/raiva_biscoito.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -107,7 +107,7 @@ animations {
 }
 animations {
   id: "medo_sombra"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/medo_sombra.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -115,7 +115,7 @@ animations {
 }
 animations {
   id: "surpresa_encomenda"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/surpresa_encomenda.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -123,7 +123,7 @@ animations {
 }
 animations {
   id: "carinho_bichinho_colo"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/carinho_bichinho_colo.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -131,7 +131,7 @@ animations {
 }
 animations {
   id: "alegria_elogio_professora"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/alegria_elogio_professora.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -139,7 +139,7 @@ animations {
 }
 animations {
   id: "tristeza_planta_seca"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/tristeza_planta_seca.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -147,7 +147,7 @@ animations {
 }
 animations {
   id: "raiva_jogo_quebrado"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/raiva_jogo_quebrado.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -155,7 +155,7 @@ animations {
 }
 animations {
   id: "medo_corredor_escuro"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/medo_corredor_escuro.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -163,7 +163,7 @@ animations {
 }
 animations {
   id: "alegria_luz_folhas"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/alegria_luz_folhas.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -171,7 +171,7 @@ animations {
 }
 animations {
   id: "tristeza_cadeira_vazia"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/tristeza_cadeira_vazia.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -179,7 +179,7 @@ animations {
 }
 animations {
   id: "raiva_agora_nao"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/raiva_agora_nao.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -187,7 +187,7 @@ animations {
 }
 animations {
   id: "medo_sala_nova"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/medo_sala_nova.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -195,7 +195,7 @@ animations {
 }
 animations {
   id: "surpresa_ultima_pagina"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/surpresa_ultima_pagina.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -203,7 +203,7 @@ animations {
 }
 animations {
   id: "carinho_maos"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/carinho_maos.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -211,7 +211,7 @@ animations {
 }
 animations {
   id: "alegria_bolo_chuva"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/alegria_bolo_chuva.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -219,7 +219,7 @@ animations {
 }
 animations {
   id: "tristeza_desenho_gaveta"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/tristeza_desenho_gaveta.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -227,7 +227,7 @@ animations {
 }
 animations {
   id: "raiva_tempo_acaba"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/raiva_tempo_acaba.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
@@ -235,7 +235,7 @@ animations {
 }
 animations {
   id: "carinho_guarda_chuva"
-  images { image: "/assets/scenes/placeholder.png" }
+  images { image: "/assets/scenes/carinho_guarda_chuva.png" }
   playback: PLAYBACK_NONE
   fps: 0
   flip_horizontal: 0
