@@ -3,6 +3,10 @@ fonts {
   name: "system_font"
   font: "/assets/fonts/nunito.font"
 }
+fonts {
+  name: "nunito_title"
+  font: "/assets/fonts/nunito_title.font"
+}
 textures {
   name: "scenes"
   texture: "/assets/scenes/scenes.atlas"

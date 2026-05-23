@@ -6,12 +6,14 @@ local CX   = W * 0.5
 local IMG_Y  = 855
 local DESC_Y = 645
 
-local WHITE  = vmath.vector4(1,    1,    1,    1)
-local GRAY   = vmath.vector4(0.55, 0.55, 0.55, 1)
-local YELLOW = vmath.vector4(1,    0.85, 0.3,  1)
-local GREEN  = vmath.vector4(0.2,  0.9,  0.3,  1)
-local ORANGE = vmath.vector4(1,    0.7,  0.1,  1)
-local DARK   = vmath.vector4(0.08, 0.08, 0.12, 1)
+local WHITE     = vmath.vector4(1,    1,    1,    1)
+local OFF_WHITE = vmath.vector4(0.93, 0.93, 0.96, 1)
+local GRAY      = vmath.vector4(0.52, 0.52, 0.58, 1)
+local DARK_TEXT = vmath.vector4(0.10, 0.09, 0.14, 1)
+local YELLOW    = vmath.vector4(1,    0.88, 0.3,  1)
+local GREEN     = vmath.vector4(0.15, 0.85, 0.35, 1)
+local ORANGE    = vmath.vector4(1,    0.65, 0.1,  1)
+local DARK      = vmath.vector4(0.07, 0.07, 0.13, 1)
 
 local BTN_W = 260
 local BTN_H = 70
@@ -135,9 +137,6 @@ end
 local function build(self)
     self.bg = make_box(vmath.vector3(CX, H * 0.5, 0), W, H, DARK)
 
-    -- state debug label (top-left area)
-    self.state_lbl = make_text(vmath.vector3(200, 1085, 0.1), "ACT_SELECT", GRAY)
-
     -- act · scene counter (shown during gameplay)
     self.act_lbl = make_text(vmath.vector3(CX, 1040, 0.1), "", WHITE)
 
@@ -154,28 +153,30 @@ local function build(self)
     -- hint (Ato 1 only)
     self.hint_lbl = make_text(vmath.vector3(CX, 597, 0.1), "", YELLOW)
 
-    -- feedback line
-    self.feedback_lbl = make_text(vmath.vector3(CX, 550, 0.1), "", WHITE)
-
-    -- label above answer buttons
-    self.choose_lbl = make_text(vmath.vector3(CX, 570, 0.1), "Qual e o sentimento?", GRAY)
+    -- feedback and choose labels share the same y slot (mutually exclusive visibility)
+    self.feedback_lbl = make_text(vmath.vector3(CX, 548, 0.1), "", WHITE)
+    self.choose_lbl   = make_text(vmath.vector3(CX, 548, 0.1), "Qual é o sentimento?", GRAY)
 
     -- emotion answer buttons
     self.btns = {}
     for _, e in ipairs(emotions.list) do
-        local c   = e.color
-        local btn = make_box(BTN_POS[e.id], BTN_W, BTN_H, vmath.vector4(c.r, c.g, c.b, 1))
-        make_text(vmath.vector3(0, 0, 0.1), e.label, vmath.vector4(0, 0, 0, 1), btn)
+        local c       = e.color
+        local btn     = make_box(BTN_POS[e.id], BTN_W, BTN_H, vmath.vector4(c.r, c.g, c.b, 1))
+        local lbl_col = e.light_text and WHITE or DARK_TEXT
+        make_text(vmath.vector3(0, 0, 0.1), e.label, lbl_col, btn)
         self.btns[e.id] = btn
     end
 
     -- ── tela de seleção de ato ────────────────────────────────────────────────
 
-    self.act_select_title = make_text(vmath.vector3(CX, 800, 0.1), "Escolha um Ato", WHITE)
+    self.game_title_lbl = make_text(vmath.vector3(CX, 920, 0.1), "Sentimentário", WHITE)
+    gui.set_font(self.game_title_lbl, "nunito_title")
+
+    self.act_select_title = make_text(vmath.vector3(CX, 800, 0.1), "Escolha um Ato", GRAY)
     self.act_btns = {
-        [1] = make_box(vmath.vector3(CX, 650, 0.2), 500, 80, vmath.vector4(0.25, 0.35, 0.55, 1)),
-        [2] = make_box(vmath.vector3(CX, 540, 0.2), 500, 80, vmath.vector4(0.25, 0.35, 0.55, 1)),
-        [3] = make_box(vmath.vector3(CX, 430, 0.2), 500, 80, vmath.vector4(0.25, 0.35, 0.55, 1)),
+        [1] = make_box(vmath.vector3(CX, 650, 0.2), 500, 80, vmath.vector4(0.20, 0.38, 0.62, 1)),
+        [2] = make_box(vmath.vector3(CX, 540, 0.2), 500, 80, vmath.vector4(0.24, 0.34, 0.56, 1)),
+        [3] = make_box(vmath.vector3(CX, 430, 0.2), 500, 80, vmath.vector4(0.20, 0.28, 0.50, 1)),
     }
     make_text(vmath.vector3(0, 0, 0.1), "Ato 1 — Aprender",   WHITE, self.act_btns[1])
     make_text(vmath.vector3(0, 0, 0.1), "Ato 2 — Reconhecer", WHITE, self.act_btns[2])
@@ -184,7 +185,7 @@ local function build(self)
     -- ── botão persistente do Livro (canto superior direito) ───────────────────
 
     self.book_btn = make_box(vmath.vector3(570, 1085, 0.3), 110, 50,
-                             vmath.vector4(0.28, 0.28, 0.40, 1))
+                             vmath.vector4(0.35, 0.22, 0.50, 1))
     make_text(vmath.vector3(0, 0, 0.1), "Livro", WHITE, self.book_btn)
 
     -- ── Livro de Sentimentos ──────────────────────────────────────────────────
@@ -208,17 +209,17 @@ local function build(self)
     end
 
     self.back_btn = make_box(vmath.vector3(CX, 390, 0.2), 220, 60,
-                             vmath.vector4(0.28, 0.28, 0.40, 1))
+                             vmath.vector4(0.35, 0.22, 0.50, 1))
     make_text(vmath.vector3(0, 0, 0.1), "Voltar", WHITE, self.back_btn)
 
     -- ── modo cubo ─────────────────────────────────────────────────────────────
 
     self.mode_btn     = make_box(vmath.vector3(70, 1085, 0.3), 110, 50,
-                                  vmath.vector4(0.28, 0.28, 0.40, 1))
-    self.mode_btn_lbl = make_text(vmath.vector3(0, 0, 0.1), "Botoes", WHITE, self.mode_btn)
+                                  vmath.vector4(0.18, 0.32, 0.52, 1))
+    self.mode_btn_lbl = make_text(vmath.vector3(0, 0, 0.1), "Botões", WHITE, self.mode_btn)
 
     self.confirm_btn = make_box(vmath.vector3(CX, 390, 0.2), 400, 80,
-                                 vmath.vector4(0.25, 0.35, 0.55, 1))
+                                 vmath.vector4(0.18, 0.42, 0.72, 1))
     make_text(vmath.vector3(0, 0, 0.1), "Confirmar", WHITE, self.confirm_btn)
     gui.set_enabled(self.confirm_btn, false)
 
@@ -233,6 +234,7 @@ local function show(node, on)
 end
 
 local function show_buttons(self, on)
+    if on then show(self.feedback_lbl, false) end
     show(self.choose_lbl, on)
     for _, e in ipairs(emotions.list) do
         show(self.btns[e.id], on)
@@ -246,7 +248,7 @@ local function show_answer_ui(self, on)
         show(self.cube_status_lbl, on)
         if on then
             gui.set_text(self.cube_status_lbl,
-                self.cube_ready and "Cubo pronto — toque Confirmar" or "Aguardando conexao...")
+                self.cube_ready and "Cubo pronto — toque Confirmar" or "Aguardando conexão...")
             gui.set_color(self.cube_status_lbl, self.cube_ready and GREEN or GRAY)
         end
     else
@@ -261,6 +263,7 @@ local function show_game_ui(self, on)
 end
 
 local function show_act_select_ui(self, on)
+    show(self.game_title_lbl,   on)
     show(self.act_select_title, on)
     show(self.act_btns[1],      on)
     show(self.act_btns[2],      on)
@@ -278,6 +281,7 @@ local function show_book_ui(self, on)
 end
 
 local function enter_act_select(self)
+    gui.cancel_animation(self.game_title_lbl,   gui.PROP_COLOR)
     gui.cancel_animation(self.act_select_title, gui.PROP_COLOR)
     show(self.hint_lbl,        false)
     show(self.feedback_lbl,    false)
@@ -290,10 +294,11 @@ local function enter_act_select(self)
     show(self.mode_btn,         true)
     show_act_select_ui(self,    true)
     self.book_active = false
-    anim_pulse(self.act_select_title)
+    anim_pulse(self.game_title_lbl)
 end
 
 local function enter_book(self)
+    gui.cancel_animation(self.game_title_lbl,   gui.PROP_COLOR)
     gui.cancel_animation(self.act_select_title, gui.PROP_COLOR)
     show(self.hint_lbl,      false)
     show(self.feedback_lbl,  false)
@@ -332,7 +337,7 @@ function init(self)
     self.btns_active       = false
     self.book_active       = false
     self.act_select_active = false
-    self.progress          = {}   -- emotion_id → count (0..3)
+    self.progress          = {}
     self.cube_mode         = false
     self.cube_ready        = false
     build(self)
@@ -344,7 +349,6 @@ end
 function on_message(self, message_id, message, sender)
 
     if message_id == hash("state_changed") then
-        gui.set_text(self.state_lbl, message.state)
 
         if message.state == "ACT_SELECT" then
             enter_act_select(self)
@@ -352,6 +356,7 @@ function on_message(self, message_id, message, sender)
         elseif message.state == "PRESENTING" then
             self.book_active   = false
             self.cube_ready    = false
+            gui.cancel_animation(self.game_title_lbl,   gui.PROP_COLOR)
             gui.cancel_animation(self.act_select_title, gui.PROP_COLOR)
             show(self.hint_lbl,       false)
             show(self.feedback_lbl,   false)
@@ -385,7 +390,7 @@ function on_message(self, message_id, message, sender)
 
     elseif message_id == hash("present_scene") then
         gui.set_text(self.act_lbl,
-            "Ato " .. message.act .. "  -  Cena " .. message.scene_index)
+            "Ato " .. message.act .. " · Cena " .. message.scene_index)
         gui.set_text(self.desc_lbl, message.description)
         gui.play_flipbook(self.scene_img, hash(message.image))
         anim_scene_enter(self.scene_img, self.desc_lbl)
@@ -399,6 +404,7 @@ function on_message(self, message_id, message, sender)
 
     elseif message_id == hash("answer_correct") then
         local e = emotions.by_id[message.emotion_id]
+        show(self.choose_lbl, false)
         if message.book_eligible then
             self.progress[message.emotion_id] = message.progress
             if message.progress >= 3 then
@@ -411,17 +417,18 @@ function on_message(self, message_id, message, sender)
                 gui.set_color(self.feedback_lbl, GREEN)
             end
         else
-            gui.set_text(self.feedback_lbl, "Correto! Mas nao conta para o livro desta vez.")
+            gui.set_text(self.feedback_lbl, "Correto! Mas não conta para o Livro desta vez.")
             gui.set_color(self.feedback_lbl, YELLOW)
         end
         show(self.feedback_lbl, true)
         anim_feedback_pop(self.feedback_lbl)
 
     elseif message_id == hash("answer_wrong") then
+        show(self.choose_lbl, false)
         if message.book_eligible then
             gui.set_text(self.feedback_lbl, "Quase! Tente de novo!")
         else
-            gui.set_text(self.feedback_lbl, "Quase! Tente de novo! (nao conta para o livro)")
+            gui.set_text(self.feedback_lbl, "Quase! Tente de novo! (não conta para o Livro)")
         end
         gui.set_color(self.feedback_lbl, ORANGE)
         show(self.feedback_lbl, true)
@@ -430,14 +437,14 @@ function on_message(self, message_id, message, sender)
     elseif message_id == hash("input_mode_changed") then
         self.cube_mode  = message.cube_mode
         self.cube_ready = false
-        gui.set_text(self.mode_btn_lbl, self.cube_mode and "Cubo" or "Botoes")
+        gui.set_text(self.mode_btn_lbl, self.cube_mode and "Cubo" or "Botões")
         local in_answer = self.btns_active or gui.is_enabled(self.confirm_btn)
         if in_answer then
             show_buttons(self, not self.cube_mode)
             show(self.confirm_btn,     self.cube_mode)
             show(self.cube_status_lbl, self.cube_mode)
             if self.cube_mode then
-                gui.set_text(self.cube_status_lbl, "Aguardando conexao...")
+                gui.set_text(self.cube_status_lbl, "Aguardando conexão...")
                 gui.set_color(self.cube_status_lbl, GRAY)
             end
         end
@@ -456,7 +463,7 @@ function on_message(self, message_id, message, sender)
                 gui.set_text(self.cube_status_lbl,  "Conectado — posicione o cubo")
                 gui.set_color(self.cube_status_lbl, YELLOW)
             else
-                gui.set_text(self.cube_status_lbl,  "Sem conexao com o cubo")
+                gui.set_text(self.cube_status_lbl,  "Sem conexão com o cubo")
                 gui.set_color(self.cube_status_lbl, ORANGE)
             end
         end
