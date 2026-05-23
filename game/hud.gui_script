@@ -3,10 +3,9 @@ local emotions = require("data.emotions")
 local W    = 640
 local H    = 1136
 local CX   = W * 0.5
-local IMG_Y  = 855   -- scene image centre
-local DESC_Y = 645   -- description text centre
+local IMG_Y  = 855
+local DESC_Y = 645
 
--- colours
 local WHITE  = vmath.vector4(1,    1,    1,    1)
 local GRAY   = vmath.vector4(0.55, 0.55, 0.55, 1)
 local YELLOW = vmath.vector4(1,    0.85, 0.3,  1)
@@ -17,7 +16,6 @@ local DARK   = vmath.vector4(0.08, 0.08, 0.12, 1)
 local BTN_W = 260
 local BTN_H = 70
 
--- 2-column grid for answer buttons
 local BTN_POS = {
     joy       = vmath.vector3(160, 490, 0.2),
     sadness   = vmath.vector3(480, 490, 0.2),
@@ -30,7 +28,6 @@ local BTN_POS = {
 local BOOK_CARD_W = 270
 local BOOK_CARD_H = 130
 
--- 2-column grid for Livro de Sentimentos cards
 local BOOK_POS = {
     joy       = vmath.vector3(160, 850, 0.2),
     sadness   = vmath.vector3(480, 850, 0.2),
@@ -105,13 +102,13 @@ local function anim_scene_shake(img)
     step(1)
 end
 
-local function anim_idle_pulse(lbl)
+local function anim_pulse(lbl)
     gui.cancel_animation(lbl, gui.PROP_COLOR)
     gui.animate(lbl, gui.PROP_COLOR, vmath.vector4(1, 1, 1, 0.35),
         gui.EASING_INOUTQUAD, 1.1, 0, function()
             gui.animate(lbl, gui.PROP_COLOR, WHITE,
                 gui.EASING_INOUTQUAD, 1.1, 0, function()
-                    anim_idle_pulse(lbl)
+                    anim_pulse(lbl)
                 end)
         end)
 end
@@ -136,21 +133,20 @@ end
 -- ── ui builder ────────────────────────────────────────────────────────────────
 
 local function build(self)
-    -- full-screen dark background
     self.bg = make_box(vmath.vector3(CX, H * 0.5, 0), W, H, DARK)
 
-    -- current state name (top strip)
-    self.state_lbl = make_text(vmath.vector3(CX, 1085, 0.1), "IDLE", GRAY)
+    -- state debug label (top-left area)
+    self.state_lbl = make_text(vmath.vector3(200, 1085, 0.1), "ACT_SELECT", GRAY)
 
-    -- act · scene counter
+    -- act · scene counter (shown during gameplay)
     self.act_lbl = make_text(vmath.vector3(CX, 1040, 0.1), "", WHITE)
 
-    -- scene image (580×300 placeholder, replaced by real art per-scene)
+    -- scene image
     self.scene_img = make_box(vmath.vector3(CX, IMG_Y, 0.1), 580, 300,
                               vmath.vector4(0.16, 0.16, 0.25, 1))
     gui.set_texture(self.scene_img, "scenes")
 
-    -- scene description below the image
+    -- scene description
     self.desc_lbl = make_text(vmath.vector3(CX, DESC_Y, 0.2), "", WHITE)
     gui.set_size(self.desc_lbl, vmath.vector3(560, 70, 0))
     gui.set_line_break(self.desc_lbl, true)
@@ -158,11 +154,8 @@ local function build(self)
     -- hint (Ato 1 only)
     self.hint_lbl = make_text(vmath.vector3(CX, 597, 0.1), "", YELLOW)
 
-    -- feedback line (acerto / erro / revelar)
+    -- feedback line
     self.feedback_lbl = make_text(vmath.vector3(CX, 550, 0.1), "", WHITE)
-
-    -- idle prompt
-    self.idle_lbl = make_text(vmath.vector3(CX, 568, 0.1), "", WHITE)
 
     -- label above answer buttons
     self.choose_lbl = make_text(vmath.vector3(CX, 570, 0.1), "Qual e o sentimento?", GRAY)
@@ -176,6 +169,24 @@ local function build(self)
         self.btns[e.id] = btn
     end
 
+    -- ── tela de seleção de ato ────────────────────────────────────────────────
+
+    self.act_select_title = make_text(vmath.vector3(CX, 800, 0.1), "Escolha um Ato", WHITE)
+    self.act_btns = {
+        [1] = make_box(vmath.vector3(CX, 650, 0.2), 500, 80, vmath.vector4(0.25, 0.35, 0.55, 1)),
+        [2] = make_box(vmath.vector3(CX, 540, 0.2), 500, 80, vmath.vector4(0.25, 0.35, 0.55, 1)),
+        [3] = make_box(vmath.vector3(CX, 430, 0.2), 500, 80, vmath.vector4(0.25, 0.35, 0.55, 1)),
+    }
+    make_text(vmath.vector3(0, 0, 0.1), "Ato 1 — Aprender",   WHITE, self.act_btns[1])
+    make_text(vmath.vector3(0, 0, 0.1), "Ato 2 — Reconhecer", WHITE, self.act_btns[2])
+    make_text(vmath.vector3(0, 0, 0.1), "Ato 3 — Conectar",   WHITE, self.act_btns[3])
+
+    -- ── botão persistente do Livro (canto superior direito) ───────────────────
+
+    self.book_btn = make_box(vmath.vector3(570, 1085, 0.3), 110, 50,
+                             vmath.vector4(0.28, 0.28, 0.40, 1))
+    make_text(vmath.vector3(0, 0, 0.1), "Livro", WHITE, self.book_btn)
+
     -- ── Livro de Sentimentos ──────────────────────────────────────────────────
 
     self.book_title = make_text(vmath.vector3(CX, 1015, 0.1), "Livro de Sentimentos", WHITE)
@@ -187,17 +198,15 @@ local function build(self)
 
     for _, e in ipairs(emotions.list) do
         local c    = e.color
-        -- dimmed colour (locked state)
         local col  = vmath.vector4(c.r * 0.25, c.g * 0.25, c.b * 0.25, 1)
         local card = make_box(BOOK_POS[e.id], BOOK_CARD_W, BOOK_CARD_H, col)
-        local name_lbl   = make_text(vmath.vector3(0,  18, 0.1), e.label,      GRAY, card)
-        local status_lbl = make_text(vmath.vector3(0, -22, 0.1), "bloqueado",  GRAY, card)
+        local name_lbl   = make_text(vmath.vector3(0,  18, 0.1), e.label,     GRAY, card)
+        local status_lbl = make_text(vmath.vector3(0, -22, 0.1), "bloqueado", GRAY, card)
         self.book_cards[e.id]       = card
         self.book_name_lbls[e.id]   = name_lbl
         self.book_status_lbls[e.id] = status_lbl
     end
 
-    -- Voltar button
     self.back_btn = make_box(vmath.vector3(CX, 390, 0.2), 220, 60,
                              vmath.vector4(0.28, 0.28, 0.40, 1))
     make_text(vmath.vector3(0, 0, 0.1), "Voltar", WHITE, self.back_btn)
@@ -223,6 +232,14 @@ local function show_game_ui(self, on)
     show(self.desc_lbl,  on)
 end
 
+local function show_act_select_ui(self, on)
+    show(self.act_select_title, on)
+    show(self.act_btns[1],      on)
+    show(self.act_btns[2],      on)
+    show(self.act_btns[3],      on)
+    self.act_select_active = on
+end
+
 local function show_book_ui(self, on)
     show(self.book_title, on)
     show(self.book_count, on)
@@ -232,47 +249,44 @@ local function show_book_ui(self, on)
     end
 end
 
-local function enter_idle(self, prompt)
-    gui.cancel_animation(self.idle_lbl, gui.PROP_COLOR)
-    gui.set_color(self.idle_lbl, WHITE)
-    gui.set_text(self.idle_lbl, prompt)
-    show(self.idle_lbl,     true)
-    show(self.hint_lbl,     false)
-    show(self.feedback_lbl, false)
-    show_game_ui(self,   false)
-    show_buttons(self,   false)
-    show_book_ui(self,   false)
+local function enter_act_select(self)
+    gui.cancel_animation(self.act_select_title, gui.PROP_COLOR)
+    show(self.hint_lbl,      false)
+    show(self.feedback_lbl,  false)
+    show_game_ui(self,        false)
+    show_buttons(self,        false)
+    show_book_ui(self,        false)
+    show(self.book_btn,       true)
+    show_act_select_ui(self,  true)
     self.book_active = false
-    anim_idle_pulse(self.idle_lbl)
+    anim_pulse(self.act_select_title)
 end
 
 local function enter_book(self)
-    gui.cancel_animation(self.idle_lbl, gui.PROP_COLOR)
-    show(self.idle_lbl,     false)
-    show(self.hint_lbl,     false)
-    show(self.feedback_lbl, false)
-    show_game_ui(self,   false)
-    show_buttons(self,   false)
+    gui.cancel_animation(self.act_select_title, gui.PROP_COLOR)
+    show(self.hint_lbl,      false)
+    show(self.feedback_lbl,  false)
+    show_game_ui(self,        false)
+    show_buttons(self,        false)
+    show_act_select_ui(self,  false)
+    show(self.book_btn,       false)
 
-    -- refresh card visuals
-    local unlocked_n = 0
+    local brightness    = { [0] = 0.25, [1] = 0.5, [2] = 0.75, [3] = 1.0 }
+    local status_texts  = { [0] = "0 / 3", [1] = "1 / 3", [2] = "2 / 3", [3] = "descoberto!" }
+    local discovered_n  = 0
     for _, e in ipairs(emotions.list) do
-        local c = e.color
-        if self.unlocked[e.id] then
-            unlocked_n = unlocked_n + 1
-            gui.set_color(self.book_cards[e.id], vmath.vector4(c.r, c.g, c.b, 1))
-            gui.set_color(self.book_name_lbls[e.id],   WHITE)
-            gui.set_color(self.book_status_lbls[e.id], WHITE)
-            gui.set_text(self.book_status_lbls[e.id],  "descoberto!")
-        else
-            gui.set_color(self.book_cards[e.id], vmath.vector4(c.r * 0.25, c.g * 0.25, c.b * 0.25, 1))
-            gui.set_color(self.book_name_lbls[e.id],   GRAY)
-            gui.set_color(self.book_status_lbls[e.id], GRAY)
-            gui.set_text(self.book_status_lbls[e.id],  "bloqueado")
-        end
+        local c   = e.color
+        local cnt = self.progress[e.id] or 0
+        local br  = brightness[cnt]
+        if cnt >= 3 then discovered_n = discovered_n + 1 end
+        gui.set_color(self.book_cards[e.id], vmath.vector4(c.r * br, c.g * br, c.b * br, 1))
+        local lbl_col = cnt > 0 and WHITE or GRAY
+        gui.set_color(self.book_name_lbls[e.id],   lbl_col)
+        gui.set_color(self.book_status_lbls[e.id], lbl_col)
+        gui.set_text(self.book_status_lbls[e.id],  status_texts[cnt])
     end
 
-    gui.set_text(self.book_count, unlocked_n .. " / 6 sentimentos descobertos")
+    gui.set_text(self.book_count, discovered_n .. " / 6 sentimentos descobertos")
     show_book_ui(self, true)
     anim_book_enter(self.book_cards)
     self.book_active = true
@@ -282,11 +296,12 @@ end
 
 function init(self)
     msg.post(".", "acquire_input_focus")
-    self.btns_active = false
-    self.book_active = false
-    self.unlocked    = {}
+    self.btns_active       = false
+    self.book_active       = false
+    self.act_select_active = false
+    self.progress          = {}   -- emotion_id → count (0..3)
     build(self)
-    enter_idle(self, "Toque na tela para comecar")
+    enter_act_select(self)
 end
 
 -- ── message handler ───────────────────────────────────────────────────────────
@@ -296,23 +311,27 @@ function on_message(self, message_id, message, sender)
     if message_id == hash("state_changed") then
         gui.set_text(self.state_lbl, message.state)
 
-        if message.state == "IDLE" then
-            enter_idle(self, "Toque na tela para comecar")
+        if message.state == "ACT_SELECT" then
+            enter_act_select(self)
 
         elseif message.state == "PRESENTING" then
             self.book_active = false
-            gui.cancel_animation(self.idle_lbl, gui.PROP_COLOR)
-            show(self.idle_lbl,     false)
-            show(self.feedback_lbl, false)
-            show_game_ui(self,  true)
-            show_buttons(self,  false)
-            show_book_ui(self,  false)
+            gui.cancel_animation(self.act_select_title, gui.PROP_COLOR)
+            show(self.hint_lbl,      false)
+            show(self.feedback_lbl,  false)
+            show_game_ui(self,        true)
+            show_buttons(self,        false)
+            show_book_ui(self,        false)
+            show_act_select_ui(self,  false)
+            show(self.book_btn,       false)
 
         elseif message.state == "WAITING_FOR_ANSWER" then
             show_buttons(self, true)
+            show(self.book_btn, true)
 
         elseif message.state == "CORRECT" then
             self.btns_active = false
+            show(self.book_btn, false)
 
         elseif message.state == "WRONG" then
             self.btns_active = true
@@ -337,26 +356,33 @@ function on_message(self, message_id, message, sender)
 
     elseif message_id == hash("answer_correct") then
         local e = emotions.by_id[message.emotion_id]
-        self.unlocked[message.emotion_id] = true
-        gui.set_text(self.feedback_lbl, "Correto!  " .. e.label .. "!")
-        gui.set_color(self.feedback_lbl, GREEN)
+        if message.book_eligible then
+            self.progress[message.emotion_id] = message.progress
+            if message.progress >= 3 then
+                gui.set_text(self.feedback_lbl, "Descoberto!  " .. e.label .. "!")
+                gui.set_color(self.feedback_lbl, GREEN)
+                anim_scene_correct(self.scene_img)
+            else
+                gui.set_text(self.feedback_lbl,
+                    "Correto!  " .. e.label .. "!  (" .. message.progress .. " / 3)")
+                gui.set_color(self.feedback_lbl, GREEN)
+            end
+        else
+            gui.set_text(self.feedback_lbl, "Correto! Mas nao conta para o livro desta vez.")
+            gui.set_color(self.feedback_lbl, YELLOW)
+        end
         show(self.feedback_lbl, true)
-        anim_scene_correct(self.scene_img)
         anim_feedback_pop(self.feedback_lbl)
 
     elseif message_id == hash("answer_wrong") then
-        gui.set_text(self.feedback_lbl,
-            "Quase! Tente de novo (" .. message.attempt .. " / " .. message.max .. ")")
+        if message.book_eligible then
+            gui.set_text(self.feedback_lbl, "Quase! Tente de novo!")
+        else
+            gui.set_text(self.feedback_lbl, "Quase! Tente de novo! (nao conta para o livro)")
+        end
         gui.set_color(self.feedback_lbl, ORANGE)
         show(self.feedback_lbl, true)
         anim_scene_shake(self.scene_img)
-
-    elseif message_id == hash("reveal_answer") then
-        local e = emotions.by_id[message.emotion_id]
-        gui.set_text(self.feedback_lbl, "Era:  " .. e.label)
-        gui.set_color(self.feedback_lbl, vmath.vector4(1, 1, 1, 0))
-        show(self.feedback_lbl, true)
-        gui.animate(self.feedback_lbl, gui.PROP_COLOR, ORANGE, gui.EASING_OUTQUAD, 0.8)
     end
 end
 
@@ -365,6 +391,7 @@ end
 function on_input(self, action_id, action)
     if not (action_id == hash("touch") and action.pressed) then return end
 
+    -- book is open: only back button works
     if self.book_active then
         if gui.pick_node(self.back_btn, action.x, action.y) then
             anim_btn_press(self.back_btn)
@@ -373,6 +400,26 @@ function on_input(self, action_id, action)
         return true
     end
 
+    -- persistent book button (visible in act_select and waiting_for_answer)
+    if gui.is_enabled(self.book_btn) and gui.pick_node(self.book_btn, action.x, action.y) then
+        anim_btn_press(self.book_btn)
+        msg.post("game_manager#game_manager", "open_book")
+        return true
+    end
+
+    -- act selection buttons
+    if self.act_select_active then
+        for i = 1, 3 do
+            if gui.pick_node(self.act_btns[i], action.x, action.y) then
+                anim_btn_press(self.act_btns[i])
+                msg.post("game_manager#game_manager", "select_act", { act = i })
+                return true
+            end
+        end
+        return true
+    end
+
+    -- emotion answer buttons
     if self.btns_active then
         for _, e in ipairs(emotions.list) do
             if gui.pick_node(self.btns[e.id], action.x, action.y) then

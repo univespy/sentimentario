@@ -2,7 +2,7 @@ local emotions = require("data.emotions")
 local scenes   = require("data.scenes")
 
 local STATES = {
-    IDLE               = "IDLE",
+    ACT_SELECT         = "ACT_SELECT",
     PRESENTING         = "PRESENTING",
     WAITING_FOR_ANSWER = "WAITING_FOR_ANSWER",
     PROCESSING         = "PROCESSING",
@@ -10,8 +10,6 @@ local STATES = {
     WRONG              = "WRONG",
     BOOK               = "BOOK",
 }
-
-local MAX_WRONG = 2
 
 -- ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -29,9 +27,11 @@ local function current_scene(self)
     return scenes.acts[self.act][self.scene_index]
 end
 
-local function unlocked_count(self)
+local function fully_unlocked_count(self)
     local n = 0
-    for _ in pairs(self.unlocked) do n = n + 1 end
+    for _, p in pairs(self.progress) do
+        if p.count >= 3 then n = n + 1 end
+    end
     return n
 end
 
@@ -66,17 +66,14 @@ end
 
 local function advance(self)
     self.wrong_attempts = 0
+    self.book_eligible  = true
     self.scene_index    = self.scene_index + 1
 
     if self.scene_index > #scenes.acts[self.act] then
+        log("━━━ Act " .. self.act .. " complete! Returning to act select. ━━━")
         self.scene_index = 1
-        self.act         = self.act + 1
-        if self.act > 3 then
-            log("All acts complete!")
-            transition(self, STATES.BOOK)
-            return
-        end
-        log("━━━ Starting Act " .. self.act .. " ━━━")
+        transition(self, STATES.ACT_SELECT)
+        return
     end
 
     present_scene(self)
@@ -92,68 +89,90 @@ local function process_answer(self, emotion_id)
 
     if correct then
         transition(self, STATES.CORRECT)
-        self.unlocked[emotion_id] = true
-        log(string.format('"%s" added to Emotion Book. (%d unlocked)',
-            emotions.by_id[emotion_id].label, unlocked_count(self)))
-        msg.post("#hud", "answer_correct", { emotion_id = emotion_id })
+        local progress_val = 0
+        if self.book_eligible then
+            local p = self.progress[emotion_id]
+            if not p then
+                p = { count = 0, acts = {} }
+                self.progress[emotion_id] = p
+            end
+            if not p.acts[self.act] then
+                p.acts[self.act] = true
+                p.count = p.count + 1
+            end
+            progress_val = p.count
+            log(string.format('"%s" progress: %d/3 (%d fully discovered)',
+                emotions.by_id[emotion_id].label, progress_val, fully_unlocked_count(self)))
+        else
+            progress_val = self.progress[emotion_id] and self.progress[emotion_id].count or 0
+            log(string.format('"%s" correct but not book-eligible.',
+                emotions.by_id[emotion_id].label))
+        end
+        msg.post("#hud", "answer_correct", {
+            emotion_id    = emotion_id,
+            book_eligible = self.book_eligible,
+            progress      = progress_val,
+        })
         play_sound("correct")
         timer.delay(1.5, false, function(self, _, _)
             advance(self)
         end)
     else
         self.wrong_attempts = self.wrong_attempts + 1
-        transition(self, STATES.WRONG)
-        log(string.format("Wrong attempt %d / %d", self.wrong_attempts, MAX_WRONG))
-        msg.post("#hud", "answer_wrong", { attempt = self.wrong_attempts, max = MAX_WRONG })
-
-        if self.wrong_attempts >= MAX_WRONG then
-            local correct_emotion = emotions.by_id[scene.emotion]
-            log(string.format('Revealing: it was "%s"', correct_emotion.label))
-            msg.post("#hud", "reveal_answer", { emotion_id = scene.emotion })
-            play_sound("reveal")
-            timer.delay(2.0, false, function(self, _, _)
-                advance(self)
-            end)
-        else
-            play_sound("wrong")
-            log("Same scene repeats.")
-            timer.delay(1.5, false, function(self, _, _)
-                present_scene(self)
-            end)
+        if self.wrong_attempts >= 2 then
+            self.book_eligible = false
         end
+        transition(self, STATES.WRONG)
+        log(string.format("Wrong attempt %d (book_eligible: %s)",
+            self.wrong_attempts, tostring(self.book_eligible)))
+        play_sound("wrong")
+        msg.post("#hud", "answer_wrong", {
+            attempt       = self.wrong_attempts,
+            book_eligible = self.book_eligible,
+        })
+        timer.delay(1.5, false, function(self, _, _)
+            present_scene(self)
+        end)
     end
 end
 
 -- ── lifecycle ─────────────────────────────────────────────────────────────────
 
 function init(self)
-    self.state          = STATES.IDLE
+    self.state          = STATES.ACT_SELECT
     self.act            = 1
     self.scene_index    = 1
     self.wrong_attempts = 0
-    self.unlocked       = {}
+    self.book_eligible  = true
+    self.pre_book_state = nil
+    self.progress       = {}   -- emotion_id → { count = 0, acts = {} }
 
-    msg.post(".", "acquire_input_focus")
-    log("Ready. Tap the screen to start.")
+    transition(self, STATES.ACT_SELECT)
+    log("Ready. Select an act to begin.")
 end
 
 function on_message(self, message_id, message, sender)
     if message_id == hash("answer") then
         process_answer(self, message.emotion_id)
+    elseif message_id == hash("select_act") then
+        self.act            = message.act
+        self.scene_index    = 1
+        self.wrong_attempts = 0
+        self.book_eligible  = true
+        log("━━━ Starting Act " .. self.act .. " ━━━")
+        present_scene(self)
     elseif message_id == hash("open_book") then
+        self.pre_book_state = self.state
         play_sound("book_open")
         transition(self, STATES.BOOK)
     elseif message_id == hash("close_book") then
         play_sound("book_open")
-        transition(self, STATES.IDLE)
-    end
-end
-
-function on_input(self, action_id, action)
-    if not (action_id == hash("touch") and action.pressed) then return end
-
-    if self.state == STATES.IDLE then
-        log("━━━ Starting Act " .. self.act .. " ━━━")
-        present_scene(self)
+        local back = self.pre_book_state or STATES.ACT_SELECT
+        self.pre_book_state = nil
+        if back == STATES.WAITING_FOR_ANSWER then
+            present_scene(self)
+        else
+            transition(self, back)
+        end
     end
 end
