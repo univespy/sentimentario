@@ -210,6 +210,20 @@ local function build(self)
     self.back_btn = make_box(vmath.vector3(CX, 390, 0.2), 220, 60,
                              vmath.vector4(0.28, 0.28, 0.40, 1))
     make_text(vmath.vector3(0, 0, 0.1), "Voltar", WHITE, self.back_btn)
+
+    -- ── modo cubo ─────────────────────────────────────────────────────────────
+
+    self.mode_btn     = make_box(vmath.vector3(70, 1085, 0.3), 110, 50,
+                                  vmath.vector4(0.28, 0.28, 0.40, 1))
+    self.mode_btn_lbl = make_text(vmath.vector3(0, 0, 0.1), "Botoes", WHITE, self.mode_btn)
+
+    self.confirm_btn = make_box(vmath.vector3(CX, 390, 0.2), 400, 80,
+                                 vmath.vector4(0.25, 0.35, 0.55, 1))
+    make_text(vmath.vector3(0, 0, 0.1), "Confirmar", WHITE, self.confirm_btn)
+    gui.set_enabled(self.confirm_btn, false)
+
+    self.cube_status_lbl = make_text(vmath.vector3(CX, 295, 0.1), "", GRAY)
+    gui.set_enabled(self.cube_status_lbl, false)
 end
 
 -- ── visibility helpers ────────────────────────────────────────────────────────
@@ -224,6 +238,20 @@ local function show_buttons(self, on)
         show(self.btns[e.id], on)
     end
     self.btns_active = on
+end
+
+local function show_answer_ui(self, on)
+    if self.cube_mode then
+        show(self.confirm_btn,     on)
+        show(self.cube_status_lbl, on)
+        if on then
+            gui.set_text(self.cube_status_lbl,
+                self.cube_ready and "Cubo pronto — toque Confirmar" or "Aguardando conexao...")
+            gui.set_color(self.cube_status_lbl, self.cube_ready and GREEN or GRAY)
+        end
+    else
+        show_buttons(self, on)
+    end
 end
 
 local function show_game_ui(self, on)
@@ -251,13 +279,16 @@ end
 
 local function enter_act_select(self)
     gui.cancel_animation(self.act_select_title, gui.PROP_COLOR)
-    show(self.hint_lbl,      false)
-    show(self.feedback_lbl,  false)
-    show_game_ui(self,        false)
-    show_buttons(self,        false)
-    show_book_ui(self,        false)
-    show(self.book_btn,       true)
-    show_act_select_ui(self,  true)
+    show(self.hint_lbl,        false)
+    show(self.feedback_lbl,    false)
+    show_game_ui(self,          false)
+    show_buttons(self,          false)
+    show(self.confirm_btn,      false)
+    show(self.cube_status_lbl,  false)
+    show_book_ui(self,          false)
+    show(self.book_btn,         true)
+    show(self.mode_btn,         true)
+    show_act_select_ui(self,    true)
     self.book_active = false
     anim_pulse(self.act_select_title)
 end
@@ -300,6 +331,8 @@ function init(self)
     self.book_active       = false
     self.act_select_active = false
     self.progress          = {}   -- emotion_id → count (0..3)
+    self.cube_mode         = false
+    self.cube_ready        = false
     build(self)
     enter_act_select(self)
 end
@@ -315,23 +348,31 @@ function on_message(self, message_id, message, sender)
             enter_act_select(self)
 
         elseif message.state == "PRESENTING" then
-            self.book_active = false
+            self.book_active   = false
+            self.cube_ready    = false
             gui.cancel_animation(self.act_select_title, gui.PROP_COLOR)
-            show(self.hint_lbl,      false)
-            show(self.feedback_lbl,  false)
-            show_game_ui(self,        true)
-            show_buttons(self,        false)
-            show_book_ui(self,        false)
-            show_act_select_ui(self,  false)
-            show(self.book_btn,       false)
+            show(self.hint_lbl,       false)
+            show(self.feedback_lbl,   false)
+            show_game_ui(self,         true)
+            show_buttons(self,         false)
+            show(self.confirm_btn,     false)
+            show(self.cube_status_lbl, false)
+            show_book_ui(self,         false)
+            show_act_select_ui(self,   false)
+            show(self.book_btn,        false)
+            show(self.mode_btn,        false)
 
         elseif message.state == "WAITING_FOR_ANSWER" then
-            show_buttons(self, true)
-            show(self.book_btn, true)
+            show_answer_ui(self, true)
+            show(self.book_btn,  true)
+            show(self.mode_btn,  true)
 
         elseif message.state == "CORRECT" then
             self.btns_active = false
-            show(self.book_btn, false)
+            show(self.book_btn,        false)
+            show(self.mode_btn,        false)
+            show(self.confirm_btn,     false)
+            show(self.cube_status_lbl, false)
 
         elseif message.state == "WRONG" then
             self.btns_active = true
@@ -383,6 +424,40 @@ function on_message(self, message_id, message, sender)
         gui.set_color(self.feedback_lbl, ORANGE)
         show(self.feedback_lbl, true)
         anim_scene_shake(self.scene_img)
+
+    elseif message_id == hash("input_mode_changed") then
+        self.cube_mode  = message.cube_mode
+        self.cube_ready = false
+        gui.set_text(self.mode_btn_lbl, self.cube_mode and "Cubo" or "Botoes")
+        local in_answer = self.btns_active or gui.is_enabled(self.confirm_btn)
+        if in_answer then
+            show_buttons(self, not self.cube_mode)
+            show(self.confirm_btn,     self.cube_mode)
+            show(self.cube_status_lbl, self.cube_mode)
+            if self.cube_mode then
+                gui.set_text(self.cube_status_lbl, "Aguardando conexao...")
+                gui.set_color(self.cube_status_lbl, GRAY)
+            end
+        end
+
+    elseif message_id == hash("cube_emotion_received") then
+        self.cube_ready = true
+        if gui.is_enabled(self.cube_status_lbl) then
+            gui.set_text(self.cube_status_lbl,  "Cubo pronto — toque Confirmar")
+            gui.set_color(self.cube_status_lbl, GREEN)
+        end
+
+    elseif message_id == hash("ws_status") then
+        self.cube_ready = false
+        if gui.is_enabled(self.cube_status_lbl) then
+            if message.connected then
+                gui.set_text(self.cube_status_lbl,  "Conectado — posicione o cubo")
+                gui.set_color(self.cube_status_lbl, YELLOW)
+            else
+                gui.set_text(self.cube_status_lbl,  "Sem conexao com o cubo")
+                gui.set_color(self.cube_status_lbl, ORANGE)
+            end
+        end
     end
 end
 
@@ -400,10 +475,30 @@ function on_input(self, action_id, action)
         return true
     end
 
+    -- mode toggle button
+    if gui.is_enabled(self.mode_btn) and gui.pick_node(self.mode_btn, action.x, action.y) then
+        anim_btn_press(self.mode_btn)
+        msg.post("game_manager#game_manager", "toggle_input_mode")
+        return true
+    end
+
     -- persistent book button (visible in act_select and waiting_for_answer)
     if gui.is_enabled(self.book_btn) and gui.pick_node(self.book_btn, action.x, action.y) then
         anim_btn_press(self.book_btn)
         msg.post("game_manager#game_manager", "open_book")
+        return true
+    end
+
+    -- confirm button (cube mode only)
+    if self.cube_mode and gui.is_enabled(self.confirm_btn)
+            and gui.pick_node(self.confirm_btn, action.x, action.y) then
+        if self.cube_ready then
+            anim_btn_press(self.confirm_btn)
+            self.cube_ready = false
+            gui.set_text(self.cube_status_lbl, "Aguardando cubo...")
+            gui.set_color(self.cube_status_lbl, GRAY)
+            msg.post("game_manager#game_manager", "confirm_cube")
+        end
         return true
     end
 

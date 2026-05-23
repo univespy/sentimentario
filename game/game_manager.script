@@ -42,6 +42,7 @@ local function play_sound(id)
 end
 
 local function present_scene(self)
+    self.last_cube_emotion = nil
     transition(self, STATES.PRESENTING)
     local scene   = current_scene(self)
     local emotion = emotions.by_id[scene.emotion]
@@ -139,13 +140,16 @@ end
 -- ── lifecycle ─────────────────────────────────────────────────────────────────
 
 function init(self)
-    self.state          = STATES.ACT_SELECT
-    self.act            = 1
-    self.scene_index    = 1
-    self.wrong_attempts = 0
-    self.book_eligible  = true
-    self.pre_book_state = nil
-    self.progress       = {}   -- emotion_id → { count = 0, acts = {} }
+    self.state             = STATES.ACT_SELECT
+    self.act               = 1
+    self.scene_index       = 1
+    self.wrong_attempts    = 0
+    self.book_eligible     = true
+    self.pre_book_state    = nil
+    self.progress          = {}   -- emotion_id → { count = 0, acts = {} }
+    self.cube_mode         = false
+    self.last_cube_emotion = nil
+    self.ws_connected      = false
 
     transition(self, STATES.ACT_SELECT)
     log("Ready. Select an act to begin.")
@@ -174,5 +178,35 @@ function on_message(self, message_id, message, sender)
         else
             transition(self, back)
         end
+
+    elseif message_id == hash("toggle_input_mode") then
+        self.cube_mode         = not self.cube_mode
+        self.last_cube_emotion = nil
+        if self.cube_mode then
+            msg.post("/ws_client#ws_client", "ws_connect")
+        else
+            msg.post("/ws_client#ws_client", "ws_disconnect")
+        end
+        msg.post("#hud", "input_mode_changed", { cube_mode = self.cube_mode })
+
+    elseif message_id == hash("cube_emotion") then
+        self.last_cube_emotion = message.emotion_id
+        msg.post("#hud", "cube_emotion_received")
+
+    elseif message_id == hash("confirm_cube") then
+        if self.last_cube_emotion and self.state == STATES.WAITING_FOR_ANSWER then
+            local emotion = self.last_cube_emotion
+            self.last_cube_emotion = nil
+            process_answer(self, emotion)
+        end
+
+    elseif message_id == hash("ws_connected") then
+        self.ws_connected = true
+        msg.post("#hud", "ws_status", { connected = true })
+
+    elseif message_id == hash("ws_disconnected") then
+        self.ws_connected      = false
+        self.last_cube_emotion = nil
+        msg.post("#hud", "ws_status", { connected = false })
     end
 end

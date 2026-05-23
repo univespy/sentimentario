@@ -1,0 +1,37 @@
+local WS_URL   = "ws://localhost:8000/ws/jogo"
+local WS_TOKEN = "token-padrao-de-seguranca"
+
+function init(self)
+    self.conn = nil
+end
+
+function final(self)
+    if self.conn then websocket.disconnect(self.conn) end
+end
+
+function on_message(self, message_id, message, sender)
+    if message_id == hash("ws_connect") then
+        if self.conn then return end
+        self.conn = websocket.connect(WS_URL,
+            { headers = "Authorization: " .. WS_TOKEN .. "\r\n" },
+            function(self, conn, event, data)
+                if event == websocket.EVENT_CONNECTED then
+                    msg.post("/game_manager#game_manager", "ws_connected")
+                elseif event == websocket.EVENT_MESSAGE then
+                    local ok, parsed = pcall(json.decode, data.message)
+                    if ok and parsed and parsed.emotion then
+                        msg.post("/game_manager#game_manager", "cube_emotion",
+                            { emotion_id = parsed.emotion })
+                    end
+                elseif event == websocket.EVENT_DISCONNECTED then
+                    self.conn = nil
+                    msg.post("/game_manager#game_manager", "ws_disconnected")
+                end
+            end)
+    elseif message_id == hash("ws_disconnect") then
+        if self.conn then
+            websocket.disconnect(self.conn)
+            self.conn = nil
+        end
+    end
+end

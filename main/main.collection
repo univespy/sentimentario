@@ -50,6 +50,14 @@ embedded_instances {
   ""
 }
 embedded_instances {
+  id: "ws_client"
+  data: "components {\n"
+  "  id: \"ws_client\"\n"
+  "  component: \"/game/ws_client.script\"\n"
+  "}\n"
+  ""
+}
+embedded_instances {
   id: "camera"
   data: "embedded_components {\n"
   "  id: \"camera\"\n"
